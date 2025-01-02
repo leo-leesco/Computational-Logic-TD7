@@ -165,55 +165,11 @@ split-fst-decr (_ ∷ _ ∷ l) = s≤s (s≤s (s≤s (≤-trans (fst (split-decr
 
 split-snd-decr : {A : Set} {x : A} (l : List A) → length (snd (split (x ∷ l))) < length (x ∷ l)
 split-snd-decr [] = s≤s z≤n
-split-snd-decr {x} (y ∷ l) = s≤s (s≤s (snd (split-decr-aux l)))
+split-snd-decr (y ∷ l) = s≤s (s≤s (snd (split-decr-aux l)))
 
--- div2sup : (n : ℕ) → ℕ
--- div2sup zero = zero
--- div2sup (suc zero) = suc zero
--- div2sup (suc (suc n)) = suc (div2sup n)
---
--- div2inf : (n : ℕ) → ℕ
--- div2inf zero = zero
--- div2inf (suc zero) = zero
--- div2inf (suc (suc n)) = suc (div2inf n)
---
--- open ≡-Reasoning
---
--- div2inf+sup=id : (n : ℕ) → div2inf n + div2sup n ≡ n
--- div2inf+sup=id zero = refl
--- div2inf+sup=id (suc zero) = refl
--- div2inf+sup=id (suc (suc n)) = begin
---   div2inf (suc (suc n)) + div2sup (suc (suc n)) ≡⟨ refl ⟩
---   suc (div2inf n) + suc (div2sup n) ≡⟨ +-suc (suc (div2inf n)) (div2sup n) ⟩
---   suc (suc (div2inf n) + div2sup n) ≡⟨ cong suc (+-comm (suc (div2inf n)) (div2sup n)) ⟩
---   suc (div2sup n + suc (div2inf n)) ≡⟨ cong suc (+-suc (div2sup n) (div2inf n)) ⟩
---   suc (suc (div2sup n + div2inf n)) ≡⟨ cong (λ { x → suc (suc x) }) (+-comm (div2sup n) (div2inf n)) ⟩
---   suc (suc (div2inf n + div2sup n)) ≡⟨ cong (λ { x → suc (suc x) }) (div2inf+sup=id n) ⟩
---   suc (suc n) ∎
---
--- split-fst-size : {A : Set} (l : List A) → length (fst (split l)) ≡ div2sup (length l)
--- split-fst-size [] = refl
--- split-fst-size (x ∷ []) = refl
--- split-fst-size (x ∷ y ∷ l) = begin
---   length (x ∷ (fst (split l))) ≡⟨ refl ⟩
---   suc (length (fst (split l))) ≡⟨ cong suc (split-fst-size l) ⟩
---   suc (div2sup (length l)) ≡⟨ refl ⟩
---   div2sup (length (x ∷ y ∷ l)) ∎
---
--- split-snd-size : {A : Set} (l : List A) → length (snd (split l)) ≡ div2inf (length l)
--- split-snd-size [] = refl
--- split-snd-size (x ∷ []) = refl
--- split-snd-size (x ∷ y ∷ l) = begin
---   length (x ∷ (snd (split l))) ≡⟨ refl ⟩
---   suc (length (snd (split l))) ≡⟨ cong suc (split-snd-size l) ⟩
---   suc (div2inf (length l)) ≡⟨ refl ⟩
---   div2inf (length (x ∷ y ∷ l)) ∎
---
 mergesort-fuel : (n : ℕ) → (l : List ℕ) → (length l ≤ n) → List ℕ
 mergesort-fuel n [] l≤n = []
 mergesort-fuel n (x ∷ []) l≤n = x ∷ []
--- mergesort-fuel (suc n) l @ (x ∷ y ∷ m) l≤n with split l, split-fst-decr l, split-snd-decr l
--- ... | (l₁ , l₂) , fs≤l , ss≤l = merge (mergesort-fuel n l₁ (≤-trans {!≤-trans !} (≤-pred l≤n))) (mergesort-fuel n l₂ {! !})
 mergesort-fuel (suc n) l@(x ∷ y ∷ m) l≤n = merge (mergesort-fuel n (fst (split l)) (≤-trans (s≤s (fst (split-decr-aux m))) (≤-pred l≤n))) (mergesort-fuel n (snd (split l)) (≤-trans (s≤s (snd (split-decr-aux m))) (≤-pred l≤n)))
 
 mergesort' : List ℕ → List ℕ
@@ -222,25 +178,40 @@ mergesort' l = mergesort-fuel (length l) l (≤-refl (length l))
 test-mergesort' : List ℕ
 test-mergesort' = mergesort' (4 ∷ 1 ∷ 45 ∷ 8 ∷ 32 ∷ 12 ∷ 1 ∷ [])
 
-merge-sorted : (l₁ l₂ : Sorted) → Sorted
-merge-sorted nil l₂ = l₂
-merge-sorted L@(cons x l₁ x≤l) nil = L
-merge-sorted (cons x l₁ x≤l₁) (cons y l₂ y≤l₂) = {! !}
+-- merge-sorted : (l₁ l₂ : Sorted) → Sorted
+-- merge-sorted nil l₂ = l₂
+-- merge-sorted L@(cons x l₁ x≤l) nil = L
+-- merge-sorted X@(cons x l₁ x≤l₁) Y@(cons y l₂ y≤l₂) with x ≤? y
+-- ... | left x≤y = cons x (merge-sorted l₁ Y) {!≤≤-merge !}
+--   where
+--   ≤≤-merge : {x y : ℕ} (l : Sorted) → x ≤ y → (y≤l : y ≤≤ l) → x ≤≤ (cons y l y≤l)
+--   ≤≤-merge nil x≤y x≤[] = x≤y∷l x≤y x≤[]
+--   ≤≤-merge (cons x₁ l x≤l) x≤y y≤l = x≤y∷l x≤y y≤l
+-- ... | right y≤x = {! !}
 
-mergesort-sorting : (l : List ℕ) → Sorted
--- mergesort-sorting l with split l
+-- mergesort-sorting : (l : List ℕ) → Sorted
+-- -- mergesort-sorting l with split l
+-- -- ... | l₁ , l₂ =
+-- --   let sl₁ = mergesort-sorting l₁ in
+-- --   let sl₂ = mergesort-sorting l₂ in
+-- --   ?
+--
+-- mergesort-sorting [] = nil
+-- mergesort-sorting (x ∷ []) = cons x nil x≤[]
+-- mergesort-sorting L@(x ∷ y ∷ l) with split L
 -- ... | l₁ , l₂ =
 --   let sl₁ = mergesort-sorting l₁ in
 --   let sl₂ = mergesort-sorting l₂ in
---   ?
+--   merge-sorted sl₁ sl₂
 
-mergesort-sorting [] = nil
-mergesort-sorting (x ∷ []) = cons x nil x≤[]
-mergesort-sorting L@(x ∷ y ∷ l) with split L
-... | l₁ , l₂ =
-  let sl₁ = mergesort-sorting l₁ in
-  let sl₂ = mergesort-sorting l₂ in
-  merge-sorted sl₁ sl₂
+-- mergesort-sorting : (l : List ℕ) → sorted (mergesort' l)
+-- mergesort-sorting [] = sorted[]
+-- mergesort-sorting (x ∷ []) = sorted∷ x≤[] sorted[]
+-- mergesort-sorting L @ (x ∷ y ∷ l) with split L
+-- ... | l₁ , l₂ =
+--   let sl₁ = mergesort-sorting l₁ in
+--   let sl₂ = mergesort-sorting l₂ in
+--   {! !}
 
 Rel : (A : Set) → Set₁
 Rel A = A → A → Set
@@ -251,8 +222,16 @@ data Acc {A : Set} (_<_ : Rel A) (x : A) : Set where
 WellFounded : {A : Set} → (_<_ : Rel A) → Set
 WellFounded {A} _<_ = (x : A) → Acc _<_ x
 
-≤-< : {m n : ℕ} → (m ≤ n) → m ≡ n ∨ m < n
-≤-< = {! !}
+≤-< : (m n : ℕ) → (m ≤ n) → m ≡ n ∨ m < n
+≤-< zero zero m≤n = left refl
+≤-< zero (suc n) m≤n = right (s≤s z≤n)
+≤-< (suc m) (suc n) m≤n with ≤-< m n (≤-pred m≤n)
+... | left m=n = left (cong suc m=n)
+... | right m<n = right (≤-suc m<n)
+
+<-last : (m n : ℕ) → (m < suc n) → m ≡ n ∨ m < n
+<-last m n m≤n = ≤-< m n (≤-pred m≤n)
 
 wfNat : WellFounded _<_
-wfNat = {! !}
+wfNat zero = acc λ { y () }
+wfNat (suc x) = acc λ { y (s≤s y≤x) → {! !} } -- ici, il faudrait faire du pattern-matching sur ≤-< y x y≤x
